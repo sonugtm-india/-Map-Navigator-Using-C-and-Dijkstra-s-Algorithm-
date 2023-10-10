@@ -1,77 +1,102 @@
 #include <iostream>
 #include <vector>
-#include <climits>
+#include <map>
+#include <string>
+#include <limits>
 
 using namespace std;
 
-// Number of vertices in the graph
-const int V = 6;
+const int INF = numeric_limits<int>::max();
 
-// Function to find the vertex with the minimum distance value
-int minDistance(const vector<int>& dist, const vector<bool>& sptSet) {
-    int minDist = INT_MAX, minIndex = -1;
+// Structure to represent a city
+struct City {
+    string name;
+    vector<pair<int, City*>> neighbors; // Pair represents distance and neighbor city pointer
+};
 
-    for (int v = 0; v < V; v++) {
-        if (!sptSet[v] && dist[v] < minDist) {
-            minDist = dist[v];
-            minIndex = v;
+// Function to find the shortest path using Dijkstra's algorithm
+void dijkstra(map<string, City>& graph, string startCity, string destinationCity) {
+    map<string, int> distance;
+    map<string, string> previous;
+
+    for (auto& city : graph) {
+        distance[city.first] = INF;
+    }
+
+    distance[startCity] = 0;
+
+    while (!graph.empty()) {
+        string currentCityName;
+        int minDist = INF;
+
+        for (auto& city : graph) {
+            if (distance[city.first] < minDist) {
+                minDist = distance[city.first];
+                currentCityName = city.first;
+            }
         }
-    }
 
-    return minIndex;
-}
+        City& currentCity = graph[currentCityName];
+        graph.erase(currentCityName);
 
-// Function to print the shortest path from source to target
-void printPath(const vector<int>& parent, int target) {
-    if (parent[target] == -1) {
-        cout << target;
-        return;
-    }
-
-    printPath(parent, parent[target]);
-    cout << " -> " << target;
-}
-
-// Function to perform Dijkstra's algorithm
-void dijkstra(const vector<vector<int>>& graph, int src, int target) {
-    vector<int> dist(V, INT_MAX);  // Distance from source to each vertex
-    vector<bool> sptSet(V, false); // Shortest path tree set
-    vector<int> parent(V, -1);     // Parent array to store the shortest path tree
-
-    dist[src] = 0;
-
-    for (int count = 0; count < V - 1; count++) {
-        int u = minDistance(dist, sptSet);
-        sptSet[u] = true;
-
-        for (int v = 0; v < V; v++) {
-            if (!sptSet[v] && graph[u][v] && dist[u] != INT_MAX &&
-                dist[u] + graph[u][v] < dist[v]) {
-                dist[v] = dist[u] + graph[u][v];
-                parent[v] = u;
+        for (auto& neighbor : currentCity.neighbors) {
+            int alt = distance[currentCityName] + neighbor.first;
+            if (alt < distance[neighbor.second->name]) {
+                distance[neighbor.second->name] = alt;
+                previous[neighbor.second->name] = currentCityName;
             }
         }
     }
 
-    cout << "Shortest Path from " << src << " to " << target << ": ";
-    printPath(parent, target);
-    cout << "\nShortest Distance: " << dist[target] << endl;
+    // Print the shortest path
+    cout << "Shortest path from " << startCity << " to " << destinationCity << ": ";
+    string current = destinationCity;
+    while (current != startCity) {
+        cout << current << " <- ";
+        current = previous[current];
+    }
+    cout << startCity << endl;
+    cout << "Total distance: " << distance[destinationCity] << " units" << endl;
 }
 
 int main() {
-    vector<vector<int>> graph = {
-        {0, 4, 0, 0, 0, 0},
-        {4, 0, 8, 0, 0, 0},
-        {0, 8, 0, 7, 0, 4},
-        {0, 0, 7, 0, 9, 14},
-        {0, 0, 0, 9, 0, 10},
-        {0, 0, 4, 14, 10, 0}
-    };
+    map<string, City> graph;
 
-    int src = 0;     // Source node
-    int target = 5;  // Target node
+    int numCities;
+    cout << "Enter the number of cities: ";
+    cin >> numCities;
 
-    dijkstra(graph, src, target);
+    // Create cities and their connections
+    for (int i = 0; i < numCities; ++i) {
+        City city;
+        cout << "Enter the name of city " << i + 1 << ": ";
+        cin >> city.name;
+        graph[city.name] = city;
+
+        int numNeighbors;
+        cout << "Enter the number of neighbors for " << city.name << ": ";
+        cin >> numNeighbors;
+
+        for (int j = 0; j < numNeighbors; ++j) {
+            string neighborName;
+            int distance;
+            cout << "Enter neighbor " << j + 1 << " name and distance: ";
+            cin >> neighborName >> distance;
+
+            if (graph.find(neighborName) != graph.end()) {
+                graph[city.name].neighbors.push_back({distance, &graph[neighborName]});
+            }
+        }
+    }
+
+    // Get user input for the starting and destination cities
+    string startCity, destinationCity;
+    cout << "Enter the starting city: ";
+    cin >> startCity;
+    cout << "Enter the destination city: ";
+    cin >> destinationCity;
+
+    dijkstra(graph, startCity, destinationCity);
 
     return 0;
 }
